@@ -1,19 +1,18 @@
-import dbus
-import webbrowser
-import requests
-from lxml import html
+import dbus # to access Spotify metadata on Linux
+import webbrowser # to open link on browser
+import platform # to get current OS
 
-def get_parsed_page(url):
-    """Return the content of the website on the given url in
-    a parsed lxml format that is easy to query."""
 
-    response = requests.get(url)
-    parsed_page = html.fromstring(response.content)
-    return parsed_page
+def adapt_string(text):
+    translation_table = dict.fromkeys(map(ord, "’'-.()"), None)
+    text = text.lower().translate(translation_table).replace(' ', '-').replace('&', 'e')
+    return text
 
-def get_url():
-    previous_url = ''
-    while(True):
+def get_song():
+    song_title = ''
+    artist_name = ''
+    current_os = platform.system()
+    if current_os == 'Linux':
         session_bus = dbus.SessionBus()
         spotify_bus = session_bus.get_object("org.mpris.MediaPlayer2.spotify",
                                              "/org/mpris/MediaPlayer2")
@@ -26,36 +25,53 @@ def get_url():
         #    print(key, value)
 
         # Get song title and artist name
-        translation_table = dict.fromkeys(map(ord, "’'-.()"), None)
-        song_title = metadata['xesam:title'].lower().translate(translation_table).replace(' ', '-')
-        artist_name = metadata['xesam:artist'][0].lower().translate(translation_table).replace(' ', '-')
-        
-        # gambiarra
-        if artist_name == 'onerepublic':
-            artist_name = 'one-republic'
+        song_title = adapt_string(metadata['xesam:title'])
+        artist_name = adapt_string(metadata['xesam:artist'][0])
 
+    elif current_os == 'Windows':
+        import spotilib # to access Spotify metadata on Windows
+        song_title = adapt_string(spotilib.song())
+        artist_name = adapt_string(spotilib.artist())
+
+    return song_title, artist_name
+
+def generate_url(tab_src, song, artist):
+    # gambiarra
+    if artist == 'onerepublic':
+        artist = 'one-republic'
+
+    # generating url according to source pattern (not 100% accurate yet)
+    if tab_src == 'Songsterr':
         url_pt1 = 'http://www.songsterr.com/a/wa/bestMatchForQueryString?s='
         url_pt2 = '&a='
-        url_songsterr = url_pt1+song_title+url_pt2+artist_name
-
+        return url_pt1+song+url_pt2+artist
+    elif tab_src == 'CifraClub':
         url_pt1 = 'https://www.cifraclub.com.br/'
-        url_cifraclub = url_pt1+artist_name+'/'+song_title
+        return url_pt1+artist+'/'+song
 
-        url = url_cifraclub
+def banner():
+    tab_src = ''
+    print('\tWelcome to SpotifyTabs!\n\n\tSupported tab sources:')
+    while(tab_src != '1' and tab_src != '2'):
+        print('\t1. Songsterr\t2. Cifra Club')
+        tab_src = str(input('\tChoice: '))
+    print('\nSpotifyTabs is now running.\nPress ctrl+c to stop.\n')
+
+    if tab_src == '1':
+        return 'Songsterr'
+    elif tab_src == '2':
+        return 'CifraClub'
+
+def main():
+    previous_url = ''
+    tab_src = banner()
+    while(True):
+        song, artist = get_song()
+        url = generate_url(tab_src, song, artist)
+
         if previous_url != url:
-            try:
-                webbrowser.open(url)
-                # parsed_page = get_parsed_page(url)
-                # Print the website's title
-                # chords = parsed_page.xpath('//span[@class="tablatura"]/text()')
-                # tabs = parsed_page.xpath('//span[@class="cnt"]/text()')
-                # for chord in chords:
-                #    print(chord)
-            except:
-                pass
-            finally:
-                previous_url = url
+            webbrowser.open(url)
+            previous_url = url
 
 if __name__ == '__main__':
-        get_url()
-
+        main()
