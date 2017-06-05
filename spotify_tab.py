@@ -45,13 +45,15 @@ def generate_url(tab_src, song, artist):
     #     artist = 'one-republic'
 
     # generating url according to source pattern (not 100% accurate yet)
-    if tab_src == 'Songsterr':
-        return s._songsterr(song, artist)[0]
-    elif tab_src == 'CifraClub':
-        return s._cifraclub(song, artist)[0]
-    elif tab_src == 'UltimateGuitar':
-        return s._ultimateguitar(song, artist)[0]
-
+    try:    
+        if tab_src == 'Songsterr':
+            return s._songsterr(song, artist)[0]
+        elif tab_src == 'CifraClub':
+            return s._cifraclub(song, artist)[0]
+        elif tab_src == 'UltimateGuitar':
+            return s._ultimateguitar(song, artist)[0]
+    except Exception as e:
+        print(e)
 
 def banner():
     tab_src = ''
